@@ -18,7 +18,7 @@ Produce a dependency graph:
 ``` nix
 {
   outputs = { self, haskell-dependency-graph-nix }: {
-    checks.x86-64_linux.dependency-graph = haskell-dependency-graph-nix.lib.x86-64_linux.haskell-dependency-graph-nix {
+    checks.x86-64_linux.dependency-graph = haskell-dependency-graph-nix.lib.x86-64_linux.makeDependencyGraph {
       packages = [
         "foobar"
         "foobar-gen"
