@@ -15,16 +15,21 @@
     in
     with pkgs.lib;
     {
-      lib.${system} = {
-        makeDependencyGraph = pkgs.callPackage ./nix/makeDependencyGraph.nix { };
-      };
+      lib.${system} =
+        let
+          makeDependencyDot = pkgs.callPackage ./nix/makeDependencyDot.nix { };
+          makeDependencyGraph = pkgs.callPackage ./nix/makeDependencyGraph.nix { inherit makeDependencyDot; };
+        in
+        {
+          inherit makeDependencyDot makeDependencyGraph;
+        };
       checks.${system} = {
         yesod = self.lib.${system}.makeDependencyGraph {
           name = "yesod-dependency-graph";
           packages = [
             "yesod"
             "yesod-auth"
-            "yesod-auth-oauth" # Marked as broken
+            "yesod-auth-oauth"
             "yesod-bin"
             "yesod-core"
             "yesod-eventsource"
@@ -42,6 +47,7 @@
           src = ./.;
           hooks = {
             nixpkgs-fmt.enable = true;
+            deadnix.enable = true;
           };
         };
       };

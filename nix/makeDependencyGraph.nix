@@ -1,42 +1,27 @@
 { lib
 , haskellPackages
-, writeTextFile
 , stdenv
 , graphviz
+, makeDependencyDot
 }:
+let
+  x = haskellPackages;
+in
+# Make a rendered dependency graph with graphviz
 { name ? "dependency-graph"
 , packages ? [ ]
+, haskellPackages ? x
+, format ? "png"
 }:
 with lib;
 let
-  # directDependenciesOf :: String -> [String]
-  directDependenciesOf = pkg: builtins.map (p: builtins.toString (p.pname or p.name or p)) haskellPackages.${pkg}.getCabalDeps.libraryHaskellDepends;
-
-  dotFile = writeTextFile {
-    name = "${name}.dot";
-    text =
-      let
-        packageNode = pkg: "\"${pkg}\" [style=solid];";
-        dependencyEdge = pkgFrom: pkgTo: "\"${pkgFrom}\" -> \"${pkgTo}\";";
-        packageDependencyEdges = pkg:
-          let relevantDependencies = intersectLists (directDependenciesOf pkg) packages;
-          in concatStringsSep "\n  " (builtins.map (dependencyEdge pkg) relevantDependencies);
-      in
-      ''
-        strict digraph dependencies {
-          ${concatStringsSep "\n  " (builtins.map packageNode packages)}
-          ${concatStringsSep "\n  " (builtins.map packageDependencyEdges packages)}
-        }
-      '';
-  };
-
+  dotFile = makeDependencyDot { inherit name packages haskellPackages; };
 in
 stdenv.mkDerivation {
   inherit name;
   dontUnpack = true;
   buildCommand = ''
     mkdir -p $out
-    ln -s ${dotFile} $out/${name}.dot
-    ${graphviz}/bin/dot -Tpng ${dotFile} > $out/${name}.png
+    ${graphviz}/bin/dot -T${format} ${dotFile} > $out/${name}.${format}
   '';
 }
