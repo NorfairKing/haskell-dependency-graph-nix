@@ -1,72 +1,59 @@
 {
-  description = "Haskell dependency graph";
+  description = "Haskell Dependency Graph Nix";
 
-  outputs = { self, nixpkgs }:
-    let system = "x86_64-linux";
-    in
-    {
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-22.05";
+    pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
+  };
 
-      lib.${system} = {
-        makeDependencyGraph =
-          { name ? "dependency-graph"
-          , packages ? [ ]
-          }:
-          let
-            pkgs = import nixpkgs {
-              inherit system;
-            };
-          in
-          with pkgs.lib;
-          let
-            # directDependenciesOf :: String -> [String]
-            directDependenciesOf = pkg: builtins.map (p: builtins.toString (p.pname or p.name or p)) pkgs.haskellPackages.${pkg}.getCabalDeps.libraryHaskellDepends;
-
-            dotFile = pkgs.writeTextFile {
-              name = "${name}.dot";
-              text =
-                let
-                  packageNode = pkg: "\"${pkg}\" [style=solid];";
-                  dependencyEdge = pkgFrom: pkgTo: "\"${pkgFrom}\" -> \"${pkgTo}\";";
-                  packageDependencyEdges = pkg:
-                    let relevantDependencies = intersectLists (directDependenciesOf pkg) packages;
-                    in concatStringsSep "\n  " (builtins.map (dependencyEdge pkg) relevantDependencies);
-                in
-                ''
-                  strict digraph dependencies {
-                    ${concatStringsSep "\n  " (builtins.map packageNode packages)}
-                    ${concatStringsSep "\n  " (builtins.map packageDependencyEdges packages)}
-                  }
-                '';
-            };
-
-          in
-          pkgs.stdenv.mkDerivation {
-            inherit name;
-            dontUnpack = true;
-            buildCommand = ''
-              mkdir -p $out
-              ln -s ${dotFile} $out/${name}.dot
-              ${pkgs.graphviz}/bin/dot -Tpng ${dotFile} > $out/${name}.png
-            '';
-          };
+  outputs = { self, nixpkgs, pre-commit-hooks }:
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs {
+        inherit system;
       };
-      checks.${system}.yesod = self.lib.${system}.makeDependencyGraph {
-        packages = [
-          "yesod"
-          "yesod-auth"
-          "yesod-auth-oauth" # Marked as broken
-          "yesod-bin"
-          "yesod-core"
-          "yesod-eventsource"
-          "yesod-form"
-          "yesod-form-multi"
-          "yesod-newsfeed"
-          "yesod-persistent"
-          "yesod-sitemap"
-          "yesod-static"
-          "yesod-test"
-          "yesod-websockets"
-        ];
+    in
+    with pkgs.lib;
+    {
+      lib.${system} = {
+        makeDependencyGraph = pkgs.callPackage ./nix/makeDependencyGraph.nix { };
+      };
+      checks.${system} = {
+        yesod = self.lib.${system}.makeDependencyGraph {
+          name = "yesod-dependency-graph";
+          packages = [
+            "yesod"
+            "yesod-auth"
+            "yesod-auth-oauth" # Marked as broken
+            "yesod-bin"
+            "yesod-core"
+            "yesod-eventsource"
+            "yesod-form"
+            "yesod-form-multi"
+            "yesod-newsfeed"
+            "yesod-persistent"
+            "yesod-sitemap"
+            "yesod-static"
+            "yesod-test"
+            "yesod-websockets"
+          ];
+        };
+        pre-commit = pre-commit-hooks.lib.${system}.run {
+          src = ./.;
+          hooks = {
+            nixpkgs-fmt.enable = true;
+          };
+        };
+      };
+      devShells.${system}.default = pkgs.mkShell {
+        name = "haskell-dependency-graph-shell";
+        buildInputs = (with pkgs; [
+          graphviz
+        ]) ++ (with pre-commit-hooks.packages.${system};
+          [
+            nixpkgs-fmt
+          ]);
+        shellHook = self.checks.${system}.pre-commit.shellHook;
       };
     };
 }
