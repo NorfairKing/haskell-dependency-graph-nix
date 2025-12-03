@@ -2,7 +2,7 @@
   description = "Haskell Dependency Graph Nix";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-25.11";
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
   };
 
