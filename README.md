@@ -1,5 +1,7 @@
 # Haskell Dependency Graph Nix
 
+[![NixCI](https://staging.nix-ci.com/badge/gh:NorfairKing:haskell-dependency-graph-nix)](https://staging.nix-ci.com/gh:NorfairKing:haskell-dependency-graph-nix)
+
 Produce a dependency graph of Haskell Packages from Nix
 
 ## Quick Start
